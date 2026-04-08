@@ -265,14 +265,14 @@ services:
         echo
         echo "Creating missing opt dirs if missing:"
         echo
-        mkdir -v -p /opt/airflow/{logs,dags,plugins,config}
+        mkdir -v -p /opt/airflow/{logs,log-shipping,dags,plugins,config}
         echo
         echo "Airflow version:"
         /entrypoint airflow version
         echo
         echo "Files in shared volumes:"
         echo
-        ls -la /opt/airflow/{logs,dags,plugins,config}
+        ls -la /opt/airflow/{logs,log-shipping,dags,plugins,config}
         echo
         echo "Running airflow config list to create default config file if missing."
         echo
@@ -280,7 +280,7 @@ services:
         echo
         echo "Files in shared volumes:"
         echo
-        ls -la /opt/airflow/{logs,dags,plugins,config}
+        ls -la /opt/airflow/{logs,log-shipping,dags,plugins,config}
         echo
         echo "Change ownership of files in /opt/airflow to ${AIRFLOW_UID}:0"
         echo
@@ -288,11 +288,11 @@ services:
         echo
         echo "Change ownership of files in shared volumes to ${AIRFLOW_UID}:0"
         echo
-        chown -v -R "${AIRFLOW_UID}:0" /opt/airflow/{logs,dags,plugins,config}
+        chown -v -R "${AIRFLOW_UID}:0" /opt/airflow/{logs,log-shipping,dags,plugins,config}
         echo
         echo "Files in shared volumes:"
         echo
-        ls -la /opt/airflow/{logs,dags,plugins,config}
+        ls -la /opt/airflow/{logs,log-shipping,dags,plugins,config}
 
     # yamllint enable rule:line-length
     environment:
