@@ -28,8 +28,17 @@ SHIPPING_CONTEXT_KEYS = (
 TaskLogContext = dict[str, str | int]
 
 
-def _safe_segment(value: object) -> str:
+def _sanitize_filename_part(value: object) -> str:
     """Convert a value into a filename-safe string.
+
+    The main reason is the log-shipping folder is mounted to your Windows host,
+    and values like run_id often contain characters such as : that are valid in
+    Linux paths but invalid in Windows filenames. Without _safe_segment,
+    filenames like:
+
+    run_id=manual__2026-04-08T21:18:03.884803+00:00
+
+    would break on the host side.
 
     Args:
         value: Raw value taken from the task log context.
@@ -85,14 +94,14 @@ def _shipping_file_paths(log_path: str) -> tuple[TaskLogContext, str, str]:
     """
     context = _task_context_from_log_path(log_path)
     name_parts = [
-        "{0}={1}".format(key, _safe_segment(context[key]))
+        "{0}={1}".format(key, _sanitize_filename_part(context[key]))
         for key in SHIPPING_CONTEXT_KEYS
         if context.get(key) is not None
     ]
 
     if not name_parts:
         file_name = context.get("file_name", PurePosixPath(log_path).name)
-        name_parts.append("file={0}".format(_safe_segment(file_name)))
+        name_parts.append("file={0}".format(_sanitize_filename_part(file_name)))
 
     final_path = os.path.join(SHIP_LOG_FOLDER, "__".join(name_parts) + ".log")
     return context, final_path, final_path + ".partial"
