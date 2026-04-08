@@ -4,9 +4,6 @@ from copy import deepcopy
 from datetime import datetime, timezone
 
 from airflow.config_templates.airflow_local_settings import DEFAULT_LOGGING_CONFIG
-from airflow.providers.elasticsearch.log.es_task_handler import ElasticsearchTaskHandler
-from airflow.utils.log.file_task_handler import FileTaskHandler
-from airflow.utils.state import TaskInstanceState
 
 
 class AirflowJsonFormatter(logging.Formatter):
@@ -66,37 +63,11 @@ class AirflowJsonFormatter(logging.Formatter):
 
         return json.dumps(payload, default=str)
 
-
-class LiveLocalElasticsearchTaskHandler(ElasticsearchTaskHandler):
-    """Prefer local live logs while a task is running, then read from Elasticsearch after completion."""
-
-    LIVE_STATES = {
-        TaskInstanceState.RUNNING,
-        TaskInstanceState.QUEUED,
-        TaskInstanceState.UP_FOR_RETRY,
-        TaskInstanceState.UP_FOR_RESCHEDULE,
-        TaskInstanceState.DEFERRED,
-        TaskInstanceState.RESTARTING,
-        TaskInstanceState.SCHEDULED,
-    }
-
-    def _read(self, task_instance, try_number, metadata=None):
-        if getattr(task_instance, "state", None) in self.LIVE_STATES:
-            return FileTaskHandler._read(self, task_instance, try_number, metadata)
-
-        logs, log_metadata = super()._read(task_instance, try_number, metadata)
-        if not logs and log_metadata.get("end_of_log"):
-            return FileTaskHandler._read(self, task_instance, try_number, metadata)
-        return logs, log_metadata
-
-
 LOGGING_CONFIG = deepcopy(DEFAULT_LOGGING_CONFIG)
 
 LOGGING_CONFIG["formatters"]["json"] = {
     "()": "log_config.AirflowJsonFormatter",
 }
-
-LOGGING_CONFIG["handlers"]["task"]["class"] = "log_config.LiveLocalElasticsearchTaskHandler"
 
 for handler_name, handler_config in LOGGING_CONFIG["handlers"].items():
     handler_class = handler_config.get("class", "")

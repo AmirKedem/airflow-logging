@@ -72,16 +72,11 @@ x-airflow-common:
     # See https://airflow.apache.org/docs/apache-airflow/stable/administration-and-deployment/logging-monitoring/check-health.html#scheduler-health-check-server
     # yamllint enable rule:line-length
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
-    AIRFLOW__LOGGING__REMOTE_LOGGING: 'true'
-    AIRFLOW__LOGGING__REMOTE_BASE_LOG_FOLDER: 'elasticsearch://elasticsearch:9200/airflow-logs'
+    AIRFLOW__LOGGING__BASE_LOG_FOLDER: /opt/airflow/logs
+    AIRFLOW__LOGGING__REMOTE_LOGGING: 'false'
     AIRFLOW__LOGGING__DELETE_LOCAL_LOGS: 'false'
     AIRFLOW__LOGGING__COLORED_CONSOLE_LOG: 'false'
     AIRFLOW__LOGGING__LOGGING_CONFIG_CLASS: log_config.LOGGING_CONFIG
-    AIRFLOW__ELASTICSEARCH__HOST: 'http://elasticsearch:9200'
-    AIRFLOW__ELASTICSEARCH__WRITE_TO_ES: 'true'
-    AIRFLOW__ELASTICSEARCH__JSON_FORMAT: 'true'
-    AIRFLOW__ELASTICSEARCH__JSON_FIELDS: 'asctime, filename, lineno, levelname, message'
-    AIRFLOW__ELASTICSEARCH__TARGET_INDEX: 'airflow-logs'
     PYTHONPATH: '/opt/airflow/config'
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
@@ -91,6 +86,7 @@ x-airflow-common:
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
+    - ${AIRFLOW_PROJ_DIR:-.}/log-shipping:/opt/airflow/log-shipping
     - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config
     - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins
   user: "${AIRFLOW_UID:-50000}:0"
@@ -100,29 +96,8 @@ x-airflow-common:
       condition: service_healthy
     postgres:
       condition: service_healthy
-    elasticsearch:
-      condition: service_healthy
 
 services:
-  elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: "false"
-      xpack.security.enrollment.enabled: "false"
-      ES_JAVA_OPTS: -Xms512m -Xmx512m
-    ports:
-      - "9200:9200"
-    volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health || exit 1"]
-      interval: 20s
-      timeout: 10s
-      retries: 10
-      start_period: 40s
-    restart: unless-stopped
-
   postgres:
     image: postgres:16
     environment:
@@ -368,4 +343,3 @@ services:
 
 volumes:
   postgres-db-volume:
-  elasticsearch-data:

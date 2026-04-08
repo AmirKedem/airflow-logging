@@ -1,5 +1,6 @@
 # Airflow runtime data
 logs/
+log-shipping/
 *.log
 
 # Python bytecode
