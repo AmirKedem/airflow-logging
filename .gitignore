@@ -1,0 +1,34 @@
+# Airflow runtime data
+logs/
+*.log
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local tooling and editor files
+.idea/
+.vscode/
+.DS_Store
+
+# Local secrets and overrides
+.env
+.env.*
+!.env.example
+
+# Test and coverage artifacts
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Docker and compose state
+*.pid
+*.seed
