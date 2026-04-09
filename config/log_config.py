@@ -4,6 +4,7 @@ import json
 import os
 import re
 from copy import deepcopy
+from importlib.metadata import version
 from pathlib import PurePosixPath
 from typing import Any, BinaryIO
 
@@ -12,7 +13,23 @@ import structlog
 from airflow.config_templates.airflow_local_settings import DEFAULT_LOGGING_CONFIG
 
 
+def _version_key(version_string: str) -> tuple[int, int, int]:
+    parts = version_string.split(".", 2)
+    return tuple(int(part) for part in parts[:3])
+
+
+if (3, 1, 3) <= _version_key(version("apache-airflow")) < (3, 2, 0):
+    # Remove this compatibility shim once you upgrade to Airflow 3.2.0 and above.
+    REMOTE_TASK_LOG = None
+    DEFAULT_REMOTE_CONN_ID = None
+
+
 SHIP_LOG_FOLDER = "/opt/airflow/log-shipping"
+# WARNING: Keep the temp directory on the same filesystem as SHIP_LOG_FOLDER.
+# The final handoff uses os.replace(...) for an atomic move, and that will fail
+# with a cross-device error if the temp path points to a different mount.
+SHIP_LOG_TEMP_FOLDER = "/opt/airflow/log-shipping/.tmp"
+
 SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9._=-]+")
 ATTEMPT_FILE_RE = re.compile(r"^attempt=(?P<attempt>\d+)\.log(?P<suffix>\..+)?$")
 SHIPPING_CONTEXT_KEYS = (
@@ -103,8 +120,10 @@ def _shipping_file_paths(log_path: str) -> tuple[TaskLogContext, str, str]:
         file_name = context.get("file_name", PurePosixPath(log_path).name)
         name_parts.append("file={0}".format(_sanitize_filename_part(file_name)))
 
-    final_path = os.path.join(SHIP_LOG_FOLDER, "__".join(name_parts) + ".log")
-    return context, final_path, final_path + ".partial"
+    file_name = "__".join(name_parts) + ".log"
+    final_path = os.path.join(SHIP_LOG_FOLDER, file_name)
+    partial_path = os.path.join(SHIP_LOG_TEMP_FOLDER, file_name + ".partial")
+    return context, final_path, partial_path
 
 
 class TaskLogTeeWriter:
